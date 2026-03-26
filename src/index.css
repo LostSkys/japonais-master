@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --animate-shake: shake 0.2s 2;
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+}
+
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+
+@utility transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+@utility backface-hidden {
+  backface-visibility: hidden;
+}
+
+@utility rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+body {
+  background-color: theme('colors.slate.950');
+  margin: 0;
+  overflow: hidden;
+}

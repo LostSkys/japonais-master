@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, CheckCircle2, XCircle, Volume2 } from 'lucide-react';
-import { allWords } from '../data'; // Import des mots
-import { sentencesV2 } from '../data/sentencesV2'; // Import des phrases
+import { Mic, MicOff, CheckCircle2, XCircle, Volume2, Turtle } from 'lucide-react';
+import { allWords } from '../data'; 
+import { sentencesV2 } from '../data/sentencesV2'; 
 
 const OralPractice: React.FC = () => {
   const [exerciseList, setExerciseList] = useState<any[]>([]);
@@ -10,21 +10,28 @@ const OralPractice: React.FC = () => {
   const [feedback, setFeedback] = useState<'none' | 'success' | 'error'>('none');
   const [transcript, setTranscript] = useState('');
 
-  // Initialisation : on mélange quelques mots et quelques phrases
+  // Initialisation : mélange des mots et phrases
   useEffect(() => {
     const randomWords = [...allWords].sort(() => 0.5 - Math.random()).slice(0, 5);
     const randomSentences = [...sentencesV2].sort(() => 0.5 - Math.random()).slice(0, 5);
-    
-    // On met les mots simples au début et les phrases après
     setExerciseList([...randomWords, ...randomSentences]);
   }, []);
 
   const current = exerciseList[index];
 
-  const speak = () => {
+  // Fonction de prononciation avec gestion de la vitesse
+  const speak = (isSlow: boolean = false) => {
     if (!current) return;
+
+    // On stoppe toute lecture en cours pour éviter les mélanges
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(current.jp);
     utterance.lang = 'ja-JP';
+    
+    // 1.0 = Normal, 0.5 à 0.6 = Lent (parfait pour bien entendre chaque syllabe)
+    utterance.rate = isSlow ? 0.55 : 1.0; 
+    
     window.speechSynthesis.speak(utterance);
   };
 
@@ -79,7 +86,7 @@ const OralPractice: React.FC = () => {
     }
   };
 
-  if (!current) return <div className="text-white">Chargement...</div>;
+  if (!current) return <div className="text-white text-center p-10">Chargement des exercices...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto p-6 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl animate-in fade-in duration-300">
@@ -93,10 +100,25 @@ const OralPractice: React.FC = () => {
       </div>
 
       <div className="flex flex-col items-center gap-6">
-        <button onClick={speak} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold">
-          <Volume2 size={20} /> Écouter l'exemple
-        </button>
+        
+        {/* BOUTONS D'ÉCOUTE */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => speak(false)} 
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-xl text-slate-300 hover:text-white transition-all text-xs font-bold border border-slate-600"
+          >
+            <Volume2 size={18} /> Normal
+          </button>
+          
+          <button 
+            onClick={() => speak(true)} 
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-xl text-amber-400 hover:text-amber-300 transition-all text-xs font-bold border border-slate-600"
+          >
+            <Turtle size={18} /> Lent (Ralenti)
+          </button>
+        </div>
 
+        {/* MICRO */}
         <button
           onClick={startListening}
           disabled={isListening}
@@ -109,11 +131,11 @@ const OralPractice: React.FC = () => {
         </button>
 
         <div className="w-full min-h-[80px] flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900 border border-slate-700 text-center">
-          {feedback === 'none' && <p className="text-slate-500 text-sm">{transcript || "Clique et parle !"}</p>}
+          {feedback === 'none' && <p className="text-slate-500 text-sm">{transcript || "Clique sur le micro et parle !"}</p>}
           {feedback === 'success' && (
             <div className="text-green-400 flex flex-col items-center animate-bounce">
               <CheckCircle2 size={32} />
-              <p className="font-black uppercase text-xs mt-2">C'est ça !</p>
+              <p className="font-black uppercase text-xs mt-2">Parfait !</p>
             </div>
           )}
           {feedback === 'error' && (

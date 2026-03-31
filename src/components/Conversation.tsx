@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, CheckCircle2, XCircle, ChevronLeft, Volume2, Timer } from 'lucide-react';
+import { Mic, CheckCircle2, XCircle, ChevronLeft, Volume2, Timer, Turtle } from 'lucide-react';
 import { scenarios } from '../data/scenarios';
 import type { Step } from '../data/scenarios';
 
 const Conversation: React.FC = () => {
-  // Navigation : 'menu' ou 'chat'
   const [view, setView] = useState<'menu' | 'chat'>('menu');
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
   
-  // États de l'exercice
   const [status, setStatus] = useState<'idle' | 'listening' | 'success' | 'error'>('idle');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(15);
@@ -18,7 +16,22 @@ const Conversation: React.FC = () => {
   const currentStep = scenario.steps[stepIndex] as Step;
   const timerRef = useRef<number | null>(null);
 
-  // Gestion du Timer
+  // Fonction de synthèse vocale avec vitesse réglable
+  const speakText = (text: string, isSlow: boolean = false) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = isSlow ? 0.55 : 1.0;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Lecture automatique quand l'IA parle
+  useEffect(() => {
+    if (view === 'chat' && currentStep.role === 'IA') {
+      speakText(currentStep.text);
+    }
+  }, [stepIndex, view]);
+
   useEffect(() => {
     if (status === 'listening' && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
@@ -31,7 +44,6 @@ const Conversation: React.FC = () => {
     return () => stopTimer();
   }, [status, timeLeft]);
 
-  // Reset lors d'un changement d'étape
   useEffect(() => {
     setStatus('idle');
     setSelectedOption(null);
@@ -53,11 +65,15 @@ const Conversation: React.FC = () => {
   };
 
   const handleMicAction = () => {
+    if (currentStep.role === 'IA') {
+      speakText(currentStep.text);
+      return;
+    }
+    
     if (currentStep.type === 'write' && !selectedOption) return;
     setStatus('listening');
     setTimeLeft(15);
     
-    // Simulation d'écoute (15s max)
     setTimeout(() => {
       if (timeLeft > 0 && status !== 'error') {
         setStatus('success');
@@ -80,7 +96,6 @@ const Conversation: React.FC = () => {
     }
   };
 
-  // --- VUE MENU ---
   if (view === 'menu') {
     return (
       <div className="w-full max-w-2xl mx-auto p-4 animate-in fade-in duration-500">
@@ -104,7 +119,6 @@ const Conversation: React.FC = () => {
     );
   }
 
-  // --- VUE CONVERSATION ---
   return (
     <div className="w-full max-w-2xl mx-auto p-4 animate-in zoom-in duration-300">
       <div className="bg-slate-800 rounded-[2.5rem] p-8 shadow-2xl border border-slate-700 min-h-[600px] flex flex-col relative overflow-hidden">
@@ -139,6 +153,18 @@ const Conversation: React.FC = () => {
                   </p>
                   <p className="text-[10px] mt-2 italic opacity-60">{step.fr}</p>
                 </div>
+                
+                {/* Boutons de répétition pour l'IA */}
+                {!isUser && isLast && (
+                  <div className="flex gap-4 mt-2 ml-2">
+                    <button onClick={() => speakText(step.text, false)} className="text-slate-500 hover:text-white flex items-center gap-1 text-[10px] font-bold uppercase">
+                      <Volume2 size={14} /> Normal
+                    </button>
+                    <button onClick={() => speakText(step.text, true)} className="text-amber-500/70 hover:text-amber-400 flex items-center gap-1 text-[10px] font-bold uppercase">
+                      <Turtle size={14} /> Lent
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -164,7 +190,7 @@ const Conversation: React.FC = () => {
 
         <div className="pt-6 border-t border-slate-700/50 flex flex-col items-center gap-4">
           <p className="text-pink-500 text-[10px] font-black uppercase tracking-[0.2em]">
-            {status === 'listening' ? `${timeLeft}s restantes...` : 'Clique pour interagir'}
+            {status === 'listening' ? `${timeLeft}s restantes...` : (currentStep.role === 'IA' ? 'Écoute bien...' : 'À toi de parler !')}
           </p>
           <button 
             onClick={handleMicAction}

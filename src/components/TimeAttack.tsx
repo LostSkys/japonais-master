@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { allWords } from '../data';
-import { Heart, Timer, Zap } from 'lucide-react';
+import { Heart, Zap } from 'lucide-react';
 
 const TimeAttack: React.FC = () => {
   const [current, setCurrent] = useState<any>(null);

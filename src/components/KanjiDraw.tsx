@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Eraser, CheckCircle2, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import {AlertCircle, Sparkles } from 'lucide-react';
 import { allWords } from '../data';
 
 const KanjiDraw: React.FC = () => {

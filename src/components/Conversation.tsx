@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, CheckCircle2, XCircle, ChevronLeft, Volume2, Turtle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mic, CheckCircle2, ChevronLeft, Volume2, Turtle } from 'lucide-react';
 import { scenarios } from '../data/scenarios';
 import type { Step } from '../data/scenarios';
 
@@ -10,11 +10,9 @@ const Conversation: React.FC = () => {
   
   const [status, setStatus] = useState<'idle' | 'listening' | 'success' | 'error'>('idle');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(15);
   
   const scenario = scenarios[currentScenarioIndex];
   const currentStep = scenario.steps[stepIndex] as Step;
-  const timerRef = useRef<number | null>(null);
 
   // Fonction de synthèse vocale
   const speakText = (text: string, isSlow: boolean = false) => {
@@ -36,7 +34,6 @@ const Conversation: React.FC = () => {
   useEffect(() => {
     setStatus('idle');
     setSelectedOption(null);
-    setTimeLeft(15);
   }, [stepIndex]);
 
   const startScenario = (index: number) => {

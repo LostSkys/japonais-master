@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, CheckCircle2, ChevronLeft, Volume2, Turtle } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Volume2, Turtle } from 'lucide-react';
 import { scenarios } from '../data/scenarios';
 import type { Step } from '../data/scenarios';
 
@@ -7,30 +7,41 @@ const Conversation: React.FC = () => {
   const [view, setView] = useState<'menu' | 'chat'>('menu');
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
-  
   const [status, setStatus] = useState<'idle' | 'listening' | 'success' | 'error'>('idle');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  
-  const scenario = scenarios[currentScenarioIndex];
-  const currentStep = scenario.steps[stepIndex] as Step;
 
-  // Fonction de synthèse vocale
+  // Sécurisation de la récupération des données
+  const scenario = scenarios[currentScenarioIndex];
+  const currentStep = scenario?.steps[stepIndex] as Step;
+
+  // FONCTION DE PAROLE OPTIMISÉE POUR XIAOMI / ANDROID
   const speakText = (text: string, isSlow: boolean = false) => {
+    if (!window.speechSynthesis) return;
+
     window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
-    utterance.rate = isSlow ? 0.55 : 1.0;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const jpVoice = voices.find(v => v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'));
+    if (jpVoice) utterance.voice = jpVoice;
+
+    utterance.rate = isSlow ? 0.55 : 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
     window.speechSynthesis.speak(utterance);
   };
 
-  // Lecture automatique quand l'IA prend la parole
+  // LECTURE AUTOMATIQUE (IA) AVEC DÉLAI POUR ANDROID
   useEffect(() => {
-    if (view === 'chat' && currentStep.role === 'IA') {
-      speakText(currentStep.text);
+    if (view === 'chat' && currentStep?.role === 'IA') {
+      const timer = setTimeout(() => speakText(currentStep.text), 400);
+      return () => clearTimeout(timer);
     }
-  }, [stepIndex, view]);
+  }, [stepIndex, view, currentStep]);
 
-  // Reset à chaque nouvelle étape
   useEffect(() => {
     setStatus('idle');
     setSelectedOption(null);
@@ -42,54 +53,23 @@ const Conversation: React.FC = () => {
     setView('chat');
   };
 
-  // --- CORRECTION : LOGIQUE DU BOUTON PRINCIPAL ---
-  const handleMainAction = () => {
-    // Cas 1 : L'IA a fini de parler, on passe à la suite
-    if (currentStep.role === 'IA') {
-      if (stepIndex < scenario.steps.length - 1) {
-        setStepIndex(prev => prev + 1);
-      } else {
-        alert("Scénario terminé ! Bien joué.");
-        setView('menu');
-      }
-      return;
-    }
-    
-    // Cas 2 : C'est à l'utilisateur de parler/répondre
-    if (currentStep.type === 'write' && !selectedOption) return;
-    
-    setStatus('listening');
-    // Simulation de réussite pour avancer (ou intégration micro)
-    setTimeout(() => {
-      setStatus('success');
-      setTimeout(() => {
-        if (stepIndex < scenario.steps.length - 1) setStepIndex(prev => prev + 1);
-      }, 1200);
-    }, 2000);
-  };
-
-  const handleOptionSelect = (option: string) => {
-    setSelectedOption(option);
-    if (option === currentStep.answer) {
-      setStatus('success');
-      setTimeout(() => {
-        if (stepIndex < scenario.steps.length - 1) setStepIndex(prev => prev + 1);
-      }, 1200);
-    } else {
-      setStatus('error');
-    }
-  };
-
+  // --- VUE MENU (SCÉNARIOS) ---
   if (view === 'menu') {
     return (
       <div className="w-full max-w-2xl mx-auto p-4 animate-in fade-in duration-500">
-        <h2 className="text-white text-2xl font-black mb-8 text-center uppercase tracking-tighter">Choisis ta conversation</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 className="text-white text-2xl font-black mb-8 text-center uppercase tracking-tighter italic">Conversations</h2>
+        <div className="grid grid-cols-1 gap-4">
           {scenarios.map((s, idx) => (
-            <button key={s.id} onClick={() => startScenario(idx)} className="bg-slate-800 border border-slate-700 p-6 rounded-[2rem] hover:border-pink-500 transition-all text-left group">
-              <span className="text-3xl mb-4 block">{s.icon}</span>
-              <h3 className="text-white font-bold text-lg">{s.title}</h3>
-              <p className="text-slate-500 text-xs mt-1 uppercase font-black">{s.steps.length} Étapes</p>
+            <button 
+              key={s.id || idx} 
+              onClick={() => startScenario(idx)} 
+              className="bg-slate-800 border border-slate-700 p-6 rounded-[2rem] active:scale-95 transition-all text-left flex items-center gap-4 hover:bg-slate-750 shadow-xl"
+            >
+              <span className="text-4xl">{s.icon}</span>
+              <div>
+                <h3 className="text-white font-bold text-lg">{s.title}</h3>
+                <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">{s.steps.length} Étapes</p>
+              </div>
             </button>
           ))}
         </div>
@@ -97,30 +77,47 @@ const Conversation: React.FC = () => {
     );
   }
 
+  // --- VUE CHAT (CONVERSATION ACTIVE) ---
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 animate-in zoom-in duration-300">
-      <div className="bg-slate-800 rounded-[2.5rem] p-8 shadow-2xl border border-slate-700 min-h-[600px] flex flex-col relative overflow-hidden">
+    <div className="w-full max-w-2xl mx-auto p-2 animate-in slide-in-from-right duration-300">
+      <div className="bg-slate-800 rounded-[2rem] p-5 shadow-2xl border border-slate-700 min-h-[580px] flex flex-col">
         
-        <button onClick={() => setView('menu')} className="flex items-center gap-2 text-slate-500 text-xs font-bold mb-8 hover:text-white transition-all uppercase tracking-widest">
-          <ChevronLeft size={16} /> Retour au menu
+        <button 
+          onClick={() => setView('menu')} 
+          className="flex items-center gap-2 text-slate-500 text-[10px] font-black mb-6 uppercase hover:text-white transition-colors"
+        >
+          <ChevronLeft size={14} /> Quitter le scénario
         </button>
 
-        <div className="flex-1 space-y-6 overflow-y-auto mb-6 pr-2">
+        <div className="flex-1 space-y-4 overflow-y-auto mb-4 px-1 scrollbar-hide">
           {scenario.steps.slice(0, stepIndex + 1).map((step, index) => {
-            const isLast = index === stepIndex;
             const isUser = step.role === "USER";
+            const isLast = index === stepIndex;
             return (
-              <div key={index} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-4`}>
-                <div className={`max-w-[85%] p-5 rounded-3xl shadow-lg ${isUser ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
-                  <p className="text-lg font-bold">
-                    {step.text.replace("____", (isLast && isUser) ? (selectedOption || "____") : (step.answer || ""))}
+              <div key={index} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-2 duration-500`}>
+                <div className={`max-w-[90%] p-4 rounded-2xl shadow-md ${isUser ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                  <p className="text-sm font-bold leading-relaxed">
+                    {step.text.includes("____") 
+                      ? step.text.replace("____", (isLast && isUser ? (selectedOption || "____") : (step.answer || "")))
+                      : step.text}
                   </p>
-                  <p className="text-[10px] mt-2 italic opacity-60">{step.fr}</p>
+                  <p className="text-[10px] mt-2 opacity-70 italic font-medium">{step.fr}</p>
                 </div>
+                
                 {!isUser && isLast && (
-                  <div className="flex gap-4 mt-2 ml-2">
-                    <button onClick={() => speakText(step.text, false)} className="text-slate-500 hover:text-white flex items-center gap-1 text-[10px] font-bold uppercase"><Volume2 size={14}/> Normal</button>
-                    <button onClick={() => speakText(step.text, true)} className="text-amber-500/70 hover:text-amber-400 flex items-center gap-1 text-[10px] font-bold uppercase"><Turtle size={14}/> Lent</button>
+                  <div className="flex gap-4 mt-2 ml-1">
+                    <button 
+                      onClick={() => speakText(step.text)} 
+                      className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase hover:text-blue-300"
+                    >
+                      <Volume2 size={12} /> Normal
+                    </button>
+                    <button 
+                      onClick={() => speakText(step.text, true)} 
+                      className="flex items-center gap-1 text-[10px] font-black text-amber-500 uppercase hover:text-amber-400"
+                    >
+                      <Turtle size={12} /> Lent
+                    </button>
                   </div>
                 )}
               </div>
@@ -128,27 +125,58 @@ const Conversation: React.FC = () => {
           })}
         </div>
 
+        {/* CHOIX DES RÉPONSES */}
         {currentStep.type === 'write' && status !== 'success' && (
-          <div className="flex flex-wrap gap-2 justify-center mb-6">
+          <div className="flex flex-wrap gap-2 justify-center mb-6 animate-in zoom-in duration-300">
             {currentStep.options?.map((opt) => (
-              <button key={opt} onClick={() => handleOptionSelect(opt)} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase transition-all border-2 ${selectedOption === opt ? (opt === currentStep.answer ? 'bg-green-500 border-green-400' : 'bg-red-500 border-red-400') : 'bg-slate-700 border-slate-600 text-slate-300'}`}>
+              <button 
+                key={opt} 
+                onClick={() => {
+                  setSelectedOption(opt);
+                  if (opt === currentStep.answer) {
+                    setStatus('success');
+                    setTimeout(() => {
+                        if (stepIndex < scenario.steps.length - 1) setStepIndex(prev => prev + 1);
+                    }, 1200);
+                  } else {
+                    setStatus('error');
+                    setTimeout(() => setStatus('idle'), 800);
+                  }
+                }} 
+                className={`px-5 py-3 rounded-2xl font-bold text-xs uppercase border-2 transition-all active:scale-90 ${
+                  selectedOption === opt 
+                    ? (opt === currentStep.answer ? 'bg-green-600 border-green-400 text-white' : 'bg-red-600 border-red-400 text-white') 
+                    : 'bg-slate-700 border-slate-600 text-slate-200'
+                }`}
+              >
                 {opt}
               </button>
             ))}
           </div>
         )}
 
-        <div className="pt-6 border-t border-slate-700/50 flex flex-col items-center gap-4">
-          <p className="text-pink-500 text-[10px] font-black uppercase tracking-[0.2em]">
-            {currentStep.role === 'IA' ? "Écoute bien puis clique pour continuer" : "À toi de répondre !"}
-          </p>
-          <button 
-            onClick={handleMainAction}
-            className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-xl ${status === 'listening' ? 'bg-yellow-500' : status === 'success' ? 'bg-green-500' : 'bg-pink-600 hover:scale-110'}`}
+        {/* BOUTON D'ACTION PRINCIPAL */}
+        <div className="flex flex-col items-center gap-3 py-4 border-t border-slate-700/50">
+           <button 
+            onClick={() => {
+              if (currentStep.role === 'IA') {
+                if (stepIndex < scenario.steps.length - 1) setStepIndex(prev => prev + 1);
+                else setView('menu');
+              } else if (status === 'success') {
+                if (stepIndex < scenario.steps.length - 1) setStepIndex(prev => prev + 1);
+              }
+            }}
+            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all ${
+              status === 'success' ? 'bg-green-500 animate-bounce' : 'bg-pink-600'
+            }`}
           >
-            {status === 'success' ? <CheckCircle2 size={32} /> : currentStep.role === 'IA' ? <Volume2 size={32} /> : <Mic size={32} />}
+            {status === 'success' ? <CheckCircle2 size={28} color="white" /> : <Volume2 size={28} color="white" />}
           </button>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+            {currentStep.role === 'IA' ? "Écouter / Continuer" : "Choisis la réponse"}
+          </p>
         </div>
+
       </div>
     </div>
   );

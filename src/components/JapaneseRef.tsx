@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { Volume2, Turtle } from 'lucide-react'; // Ajout des icônes pour le son
+import { Volume2, Turtle } from 'lucide-react';
 
 const JapaneseRef: React.FC = () => {
   const [view, setView] = useState<'basics' | 'alphabet'>('basics');
 
-  // Fonction pour faire parler l'application
+  // FONCTION DE PAROLE ROBUSTE (Spéciale Android/Xiaomi)
   const speak = (text: string, isSlow: boolean = false) => {
+    if (!window.speechSynthesis) return;
+
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
-    utterance.rate = isSlow ? 0.55 : 1.0; // Vitesse lente à 0.55
+    
+    // Recherche active de la voix japonaise dans le système
+    const voices = window.speechSynthesis.getVoices();
+    const jpVoice = voices.find(v => v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'));
+    if (jpVoice) utterance.voice = jpVoice;
+
+    utterance.rate = isSlow ? 0.55 : 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
     window.speechSynthesis.speak(utterance);
   };
 
-  // Vue 1 : Les mots outils indispensables
   const basics = [
     { jp: "私", ro: "Watashi", fr: "Je / Moi" },
     { jp: "は", ro: "Wa", fr: "Particule Sujet" },
@@ -41,7 +51,6 @@ const JapaneseRef: React.FC = () => {
     { jp: "何", ro: "Nani", fr: "Quoi / Quel" }
   ];
 
-  // Vue 2 : Alphabet A-Z (Phonétique Japonaise)
   const alphabetAZ = [
     { letter: "A", jp: "あ", ro: "A" }, { letter: "B", jp: "ば", ro: "Ba" },
     { letter: "C", jp: "し", ro: "Shi" }, { letter: "D", jp: "だ", ro: "Da" },
@@ -59,39 +68,42 @@ const JapaneseRef: React.FC = () => {
   ];
 
   return (
-    <div className="bg-slate-800 rounded-3xl p-4 shadow-2xl animate-in fade-in duration-300 border border-slate-700 w-full max-w-md mx-auto">
-      {/* Sélecteur d'onglets */}
-      <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-xl">
+    <div className="bg-slate-800 rounded-[2rem] p-4 border border-slate-700 w-full max-w-md mx-auto shadow-2xl animate-in fade-in duration-500">
+      
+      <div className="flex gap-2 mb-6 bg-slate-900 p-1.5 rounded-2xl shadow-inner">
         <button 
-          onClick={() => setView('basics')}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all ${view === 'basics' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          onClick={() => setView('basics')} 
+          className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+            view === 'basics' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
+          }`}
         >
           Grammaire
         </button>
         <button 
-          onClick={() => setView('alphabet')}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all ${view === 'alphabet' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          onClick={() => setView('alphabet')} 
+          className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+            view === 'alphabet' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
+          }`}
         >
           Alphabet A-Z
         </button>
       </div>
 
-      <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
         {view === 'basics' ? (
           <div className="grid grid-cols-2 gap-3">
             {basics.map((item, i) => (
-              <div key={i} className="bg-slate-900 p-4 rounded-2xl border-b-4 border-blue-900/50 flex flex-col items-center group">
-                <span className="text-3xl font-bold text-white">{item.jp}</span>
-                <span className="text-blue-400 text-[10px] font-black uppercase mt-1">{item.ro}</span>
-                <span className="text-slate-400 text-xs mt-1 mb-3">{item.fr}</span>
+              <div key={i} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col items-center">
+                <span className="text-3xl font-black text-white mb-1">{item.jp}</span>
+                <span className="text-blue-400 text-[10px] font-black uppercase tracking-tighter mb-1">{item.ro}</span>
+                <span className="text-slate-500 text-[9px] font-medium italic text-center leading-tight mb-3 px-1">{item.fr}</span>
                 
-                {/* Petits boutons audio pour la grammaire */}
-                <div className="flex gap-2 mt-auto border-t border-slate-800 pt-2 w-full justify-center">
-                  <button onClick={() => speak(item.jp, false)} className="p-1.5 text-slate-500 hover:text-white transition-colors" title="Vitesse normale">
-                    <Volume2 size={14} />
+                <div className="flex gap-3 pt-3 border-t border-slate-800 w-full justify-center">
+                  <button onClick={() => speak(item.jp, false)} className="p-1.5 text-slate-500 active:text-blue-400 transition-colors">
+                    <Volume2 size={16} />
                   </button>
-                  <button onClick={() => speak(item.jp, true)} className="p-1.5 text-slate-500 hover:text-amber-500 transition-colors" title="Lent">
-                    <Turtle size={14} />
+                  <button onClick={() => speak(item.jp, true)} className="p-1.5 text-slate-500 active:text-amber-500 transition-colors">
+                    <Turtle size={16} />
                   </button>
                 </div>
               </div>
@@ -100,24 +112,19 @@ const JapaneseRef: React.FC = () => {
         ) : (
           <div className="grid grid-cols-3 gap-2">
             {alphabetAZ.map((item, i) => (
-              <div 
+              <button 
                 key={i} 
-                onClick={() => speak(item.jp)} // Clique sur la carte pour entendre le son
-                className="bg-slate-900 p-3 rounded-xl border border-slate-700 flex flex-col items-center relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
+                onClick={() => speak(item.jp)} 
+                className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col items-center active:scale-95 transition-all group relative overflow-hidden"
               >
-                <span className="absolute top-0 left-0 bg-slate-700 text-[8px] px-1 text-slate-300 font-bold">{item.letter}</span>
-                <span className="text-2xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">{item.jp}</span>
-                <span className="text-blue-500 text-[9px] font-black uppercase">{item.ro}</span>
-                <Volume2 size={10} className="absolute bottom-1 right-1 text-slate-700 opacity-0 group-hover:opacity-100" />
-              </div>
+                <span className="absolute top-1 left-2 text-[8px] font-black text-slate-700">{item.letter}</span>
+                <span className="text-2xl font-bold text-white group-active:text-blue-400">{item.jp}</span>
+                <span className="text-blue-500 text-[10px] font-black uppercase mt-1">{item.ro}</span>
+              </button>
             ))}
           </div>
         )}
       </div>
-      
-      <p className="mt-6 text-center text-slate-500 text-[10px] italic">
-        {view === 'basics' ? "Clique sur les icônes pour entendre la prononciation." : "Clique sur une lettre pour l'entendre !"}
-      </p>
     </div>
   );
 };

@@ -16,7 +16,7 @@ export interface Scenario {
   steps: Step[];
 }
 
-export const scenarios = [
+export const scenarios: Scenario[] = [
   {
     id: "restaurant",
     title: "Au Restaurant",

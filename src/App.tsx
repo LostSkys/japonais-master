@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MatchGame from './components/MatchGame';
 import SentenceGame from './components/SentenceGame';
 import AnimeGame from './components/AnimeGame';
@@ -16,6 +16,7 @@ import { allWords } from './data';
 type GameState = 'menu' | 'cards' | 'match' | 'sentences' | 'anime' | 'blanks' | 'ref' | 'oral' | 'conv' | 'chrono' | 'draw' | 'cameleon' | 'social' | 'master';
 
 const shuffleBag = (array: any[]) => {
+  if (!array || array.length === 0) return [];
   const newBag = [...array];
   for (let i = newBag.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -30,6 +31,37 @@ const App: React.FC = () => {
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // INITIALISATION DES VOIX SÉCURISÉE
+  useEffect(() => {
+    const initTTS = () => {
+      if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    };
+    initTTS();
+    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = initTTS;
+    }
+  }, []);
+
+  const unlockAudio = () => {
+    if (!window.speechSynthesis) return;
+
+    // 1. On crée un contexte audio vide pour forcer le matériel à s'allumer
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    gainNode.gain.value = 0.0001; // Presque inaudible
+    oscillator.start(0);
+    oscillator.stop(0.1);
+
+    // 2. On lance la synthèse vocale juste après
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(" ");
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
+
   const nextCard = () => {
     setIsFlipped(false);
     if (cardIndex >= bag.length - 1) {
@@ -38,6 +70,11 @@ const App: React.FC = () => {
     } else {
       setCardIndex((prev) => prev + 1);
     }
+  };
+
+  const handleMenuClick = (state: GameState) => {
+    unlockAudio();
+    setGameState(state);
   };
 
   const menuButtons = [
@@ -56,7 +93,6 @@ const App: React.FC = () => {
   ];
 
   return (
-    /* CHANGEMENT ICI : min-h-screen et on enlève overflow-hidden */
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center py-10 px-4 font-sans">
       
       <header className="mb-10 text-center shrink-0">
@@ -70,12 +106,11 @@ const App: React.FC = () => {
         
         {gameState === 'menu' && (
           <div className="w-full pb-24 animate-in fade-in zoom-in-95 duration-500">
-            {/* Grille de 2 colonnes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               {menuButtons.map((btn) => (
                 <button
                   key={btn.id}
-                  onClick={() => setGameState(btn.id as GameState)}
+                  onClick={() => handleMenuClick(btn.id as GameState)}
                   className={`group p-5 bg-slate-800 rounded-2xl border-l-8 ${btn.border} hover:bg-slate-750 transition-all text-left shadow-xl active:scale-95`}
                 >
                   <div className="flex items-center gap-4">
@@ -88,10 +123,9 @@ const App: React.FC = () => {
                 </button>
               ))}
               
-              {/* MASTER ORAL : Centré et de même largeur (50% de la grid) */}
               <div className="md:col-span-2 flex justify-center mt-2">
                 <button
-                  onClick={() => setGameState('master')}
+                  onClick={() => handleMenuClick('master')}
                   className="group p-5 bg-slate-800 rounded-2xl border-l-8 border-l-amber-500 hover:bg-slate-750 transition-all text-left shadow-xl active:scale-95 w-full md:w-[calc(50%-0.5rem)]"
                 >
                   <div className="flex items-center gap-4">
@@ -117,19 +151,19 @@ const App: React.FC = () => {
             </button>
             
             <div className="w-full">
-                {gameState === 'cards' && (
+                {gameState === 'cards' && bag.length > 0 && (
                   <div className="flex flex-col items-center py-2">
                     <div onClick={() => setIsFlipped(!isFlipped)} className="w-full max-w-[280px] h-[350px] perspective-1000 cursor-pointer">
                       <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                         <div className="absolute w-full h-full backface-hidden bg-slate-800 rounded-[2rem] shadow-2xl flex flex-col items-center justify-center p-6 text-center border-b-8 border-red-500">
                           <span className="text-red-400 text-[10px] font-black mb-2 tracking-widest uppercase">Français</span>
-                          <span className="text-3xl font-black text-white mb-2">{bag[cardIndex].fr}</span>
-                          <span className="text-slate-500 text-sm italic opacity-60">({bag[cardIndex].en})</span>
+                          <span className="text-3xl font-black text-white mb-2">{bag[cardIndex]?.fr}</span>
+                          <span className="text-slate-500 text-sm italic opacity-60">({bag[cardIndex]?.en})</span>
                         </div>
                         <div className="absolute w-full h-full backface-hidden bg-blue-700 rounded-[2rem] shadow-2xl flex flex-col items-center justify-center p-6 text-center rotate-y-180 border-b-8 border-blue-900">
                           <span className="text-blue-200 text-[10px] font-black mb-2 tracking-widest uppercase">Japonais</span>
-                          <span className="text-4xl font-black text-white mb-1 leading-tight">{bag[cardIndex].jp}</span>
-                          <span className="text-blue-100 text-xl font-medium italic opacity-80">{bag[cardIndex].romaji}</span>
+                          <span className="text-4xl font-black text-white mb-1 leading-tight">{bag[cardIndex]?.jp}</span>
+                          <span className="text-blue-100 text-xl font-medium italic opacity-80">{bag[cardIndex]?.romaji}</span>
                         </div>
                       </div>
                     </div>

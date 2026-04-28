@@ -1,188 +1,192 @@
 import React, { useRef, useState, useEffect } from 'react';
-import {AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, Trash2, CheckCircle } from 'lucide-react';
 import { allWords } from '../data';
 
 const KanjiDraw: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [currentWord, setCurrentWord] = useState(allWords[0]);
+  const [currentWord, setCurrentWord] = useState(allWords[Math.floor(Math.random() * allWords.length)]);
   const [feedback, setFeedback] = useState<'none' | 'success' | 'error'>('none');
-  const [fontSize, setFontSize] = useState('12rem');
+  const [fontSize, setFontSize] = useState('8rem');
 
-  // Sécurité pour les noms de propriétés dans data.ts
-  const displayRomaji = (currentWord as any).romaji || (currentWord as any).ro || "";
-
-  // Ajustement de la taille du texte selon la longueur du mot
+  // Ajustement de la taille selon la longueur du mot japonais
   useEffect(() => {
     const charCount = currentWord.jp.length;
-    if (charCount > 8) setFontSize('5rem');
-    else if (charCount > 4) setFontSize('8rem');
-    else setFontSize('12rem');
+    if (charCount > 4) setFontSize('5rem');
+    else setFontSize('8rem');
     clearCanvas();
   }, [currentWord]);
 
   const getCoords = (e: any) => {
-    const canvas = canvasRef.current!;
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // On calcule le ratio car le canvas a une taille interne (600x800) 
+    // différente de sa taille affichée (CSS)
     return {
-      x: (clientX - rect.left) * (canvas.width / canvas.offsetWidth),
-      y: (clientY - rect.top) * (canvas.height / canvas.offsetHeight)
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height
     };
   };
 
   const startDrawing = (e: any) => {
-    if (e.touches) e.preventDefault();
+    if (e.touches) e.preventDefault(); // Bloque le scroll Android
     const { x, y } = getCoords(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
       setIsDrawing(true);
       setFeedback('none');
-      ctx.lineWidth = 18; // Trait un peu plus large pour aider à la couverture
-      ctx.lineCap = 'round';
+      ctx.lineWidth = 20; 
+      ctx.lineCap = 'round'; 
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#3b82f6';
-      ctx.beginPath();
+      ctx.strokeStyle = '#3b82f6'; // Bleu clair
+      ctx.beginPath(); 
       ctx.moveTo(x, y);
     }
   };
 
   const draw = (e: any) => {
     if (!isDrawing) return;
+    if (e.touches) e.preventDefault();
     const { x, y } = getCoords(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      ctx.lineTo(x, y);
+      ctx.lineTo(x, y); 
       ctx.stroke();
     }
   };
 
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
   const clearCanvas = () => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvas?.getContext('2d');
+    if (ctx && canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setFeedback('none');
     }
-    setFeedback('none');
   };
 
   const validate = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-    
-    // Création du modèle de comparaison en mémoire
+
+    // On crée un canvas invisible pour dessiner le modèle parfait
     const memCanvas = document.createElement('canvas');
     memCanvas.width = canvas.width;
     memCanvas.height = canvas.height;
     const mctx = memCanvas.getContext('2d')!;
-    mctx.font = `normal ${fontSize} serif`;
+    mctx.font = `${fontSize} serif`;
     mctx.textAlign = 'center';
     mctx.textBaseline = 'middle';
-    mctx.fillText(currentWord.jp, memCanvas.width / 2, memCanvas.height / 2);
+    mctx.fillText(currentWord.jp, canvas.width / 2, canvas.height / 2);
 
+    // Comparaison des pixels
     const userImg = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const modelImg = mctx.getImageData(0, 0, memCanvas.width, memCanvas.height).data;
+    const modelImg = mctx.getImageData(0, 0, canvas.width, canvas.height).data;
     
-    let hits = 0; 
-    let modelPixels = 0; 
+    let hits = 0;
+    let modelPixels = 0;
 
     for (let i = 3; i < modelImg.length; i += 4) {
-      if (modelImg[i] > 20) { // Zone occupée par le texte modèle
+      if (modelImg[i] > 50) {
         modelPixels++;
-        if (userImg[i] > 20) hits++; // Zone couverte par l'utilisateur
+        if (userImg[i] > 50) hits++;
       }
     }
 
-    const accuracy = (hits / modelPixels) * 100;
-
-    // Seuil de 25% : Tolérant pour les traits fins, mais bloque le gribouillis
-    if (accuracy > 25) {
+    const precision = (hits / modelPixels) * 100;
+    if (precision > 15) { // Seuil de tolérance
       setFeedback('success');
     } else {
       setFeedback('error');
     }
   };
 
-  const handleNext = () => {
-    const randomIndex = Math.floor(Math.random() * allWords.length);
-    setCurrentWord(allWords[randomIndex]);
+  const nextWord = () => {
+    setCurrentWord(allWords[Math.floor(Math.random() * allWords.length)]);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-4 animate-in fade-in duration-500">
-      <div className="bg-slate-800 rounded-[2.5rem] p-6 shadow-2xl border border-slate-700">
+    <div className="w-full max-w-md mx-auto p-2 animate-in fade-in duration-500">
+      <div className="bg-slate-800 rounded-[2rem] p-4 shadow-2xl border border-slate-700">
         
-        <div className="text-center mb-6">
-          <h2 className="text-sm font-black text-blue-400 uppercase tracking-widest">Écriture Japonaise</h2>
-          <h3 className="text-3xl font-black text-white mt-2 leading-tight">{currentWord.fr}</h3>
-          <p className="text-slate-400 text-sm italic mt-1 opacity-70">({displayRomaji})</p>
+        <div className="flex justify-between items-center mb-4 px-2">
+          <div>
+            <h3 className="text-xl font-black text-white leading-none">{currentWord.fr}</h3>
+            <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest mt-1">{currentWord.romaji}</p>
+          </div>
+          <div className="bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
+            <span className="text-[10px] font-black text-slate-500 uppercase">Tracé</span>
+          </div>
         </div>
 
-        {/* Canvas Ratio 2:1 Adaptatif */}
-        <div className="relative w-full aspect-[2/1] bg-slate-900 rounded-3xl border-4 border-slate-700 overflow-hidden shadow-inner">
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.1] pointer-events-none select-none">
-            <span className="font-serif text-white leading-none transition-all duration-300" style={{ fontSize }}>
-              {currentWord.jp}
-            </span>
+        {/* Zone de dessin */}
+        <div className="relative w-full aspect-[3/4] bg-slate-900 rounded-2xl border-2 border-slate-700 overflow-hidden touch-none shadow-inner">
+          {/* Modèle fantôme */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] pointer-events-none select-none">
+            <span style={{ fontSize }} className="font-serif">{currentWord.jp}</span>
           </div>
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={400}
+          
+          <canvas 
+            ref={canvasRef} 
+            width={600} 
+            height={800} 
+            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
             onMouseDown={startDrawing}
             onMouseMove={draw}
-            onMouseUp={() => setIsDrawing(false)}
-            onMouseLeave={() => setIsDrawing(false)}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
             onTouchStart={startDrawing}
             onTouchMove={draw}
-            onTouchEnd={() => setIsDrawing(false)}
-            className="absolute inset-0 w-full h-full touch-none cursor-crosshair"
+            onTouchEnd={stopDrawing}
           />
         </div>
 
-        {/* Actions & Feedback */}
-        <div className="mt-8 flex flex-col items-center gap-4 max-w-md mx-auto">
-          {feedback === 'none' && (
-            <div className="flex gap-4 w-full">
-              <button onClick={clearCanvas} className="flex-1 py-4 bg-slate-700 text-slate-300 rounded-2xl font-black uppercase text-xs hover:bg-slate-600 transition-all">
-                Effacer
+        {/* Feedback et Boutons */}
+        <div className="mt-4 space-y-3">
+          {feedback === 'none' ? (
+            <div className="flex gap-2">
+              <button 
+                onClick={clearCanvas} 
+                className="flex-1 py-4 bg-slate-700 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                <Trash2 size={16} /> Effacer
               </button>
-              <button onClick={validate} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all">
-                Valider
-              </button>
-            </div>
-          )}
-
-          {feedback === 'error' && (
-            <div className="w-full animate-in zoom-in duration-300 bg-red-500/10 border-2 border-red-500 p-4 rounded-2xl text-center">
-              <div className="flex items-center justify-center gap-2 text-red-500 mb-3">
-                <AlertCircle size={20} />
-                <p className="font-bold uppercase text-xs tracking-tighter">Pas assez précis, recommence !</p>
-              </div>
-              <button onClick={clearCanvas} className="w-full py-3 bg-red-500 text-white rounded-xl font-black text-xs uppercase hover:bg-red-400 transition-all">
-                Réessayer
+              <button 
+                onClick={validate} 
+                className="flex-1 py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                <CheckCircle size={16} /> Valider
               </button>
             </div>
-          )}
-
-          {feedback === 'success' && (
-            <div className="w-full animate-in zoom-in duration-300 bg-green-500/10 border-2 border-green-500 p-4 rounded-2xl text-center">
-              <div className="flex items-center justify-center gap-2 text-green-500 mb-3">
-                <Sparkles size={20} />
-                <p className="font-bold uppercase text-xs tracking-tighter">Magnifique tracé !</p>
+          ) : feedback === 'success' ? (
+            <div className="bg-green-500/20 border border-green-500 p-4 rounded-xl text-center animate-in zoom-in duration-300">
+              <div className="flex items-center justify-center gap-2 text-green-400 mb-2">
+                <Sparkles size={18} />
+                <span className="font-black uppercase text-xs">C'est parfait !</span>
               </div>
-              <button onClick={handleNext} className="w-full py-4 bg-white text-slate-900 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-green-500 hover:text-white transition-all">
-                Suivant
-              </button>
+              <button onClick={nextWord} className="w-full py-3 bg-green-600 text-white rounded-lg font-black uppercase text-xs">Suivant →</button>
+            </div>
+          ) : (
+            <div className="bg-red-500/20 border border-red-500 p-4 rounded-xl text-center animate-in shake">
+              <div className="flex items-center justify-center gap-2 text-red-400 mb-2">
+                <AlertCircle size={18} />
+                <span className="font-black uppercase text-xs">Tracé incomplet</span>
+              </div>
+              <button onClick={clearCanvas} className="w-full py-3 bg-red-600 text-white rounded-lg font-black uppercase text-xs">Réessayer</button>
             </div>
           )}
         </div>
+
       </div>
-      <p className="text-[10px] text-slate-600 mt-6 text-center italic uppercase tracking-widest">
-        Repasse sur les traits gris pour valider l'étape
-      </p>
+      <p className="text-center text-slate-600 text-[9px] font-bold uppercase mt-4 tracking-widest">Utilise ton doigt pour dessiner le Kanji</p>
     </div>
   );
 };

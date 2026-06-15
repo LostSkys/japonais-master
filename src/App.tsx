@@ -85,7 +85,7 @@ const App: React.FC = () => {
     { id: 'sentences', label: 'Phrases', desc: 'Traductions cultes', icon: '💬', border: 'border-l-emerald-500' },
     { id: 'anime', label: 'Mode Anime', desc: 'Quiz spécial Otaku', icon: '🧧', border: 'border-l-orange-500' },
     { id: 'blanks', label: 'Paragraphes', desc: 'Textes à trous', icon: '✍️', border: 'border-l-purple-500' },
-    { id: 'ref', label: 'Guide Kanji', desc: 'Alphabet & Symboles', icon: '📖', border: 'border-l-yellow-500' },
+    { id: 'ref', label: 'Guide Kanji/katakana', desc: 'Alphabet & Symboles', icon: '📖', border: 'border-l-yellow-500' },
     { id: 'oral', label: 'Entraînement Oral', desc: 'Parle Japonais', icon: '🎤', border: 'border-l-pink-500' },
     { id: 'conv', label: 'Conversation', desc: 'Scénarios réels', icon: '🗣️', border: 'border-l-indigo-500' },
     { id: 'chrono', label: 'Défis Chrono', desc: 'Vitesse maximum !', icon: '⏱️', border: 'border-l-rose-600' },

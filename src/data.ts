@@ -5,6 +5,26 @@ export interface Word {
   fr: string;
   jp: string;
   romaji: string;
+  skillJp?: string;
+  skillFr?: string;
+  skillRomaji?: string;
+  name?: string;
+  type?: string;
+  rarity?: string;
+  // Correction ici : ce sont des tableaux d'objets, pas des tuples !
+  skills?: {
+    jp: string;
+    romaji: string;
+    effect: string;
+  }[];
+  events?: {
+    titleJp: string;
+    titleRomaji: string;
+    choices: {
+      textFr: string;
+      effect: string;
+    }[];
+  }[];
 }
 
 // --- 2. Importation de TOUS tes fichiers de données ---
@@ -26,6 +46,8 @@ import { sentencesV2 } from './data/sentencesV2'; // Corrigé (vu dans ton fichi
 import { sportWords } from './data/sports';
 import { timeWords } from './data/time';
 import { verbWords } from './data/verbs';
+import { allInazumaWords } from './data/inazuma';
+import { allUmaWords } from './data/uma';
 
 // --- 3. Création de l'objet global par catégories ---
 export const allData: Record<string, Word[]> = {
@@ -45,7 +67,9 @@ export const allData: Record<string, Word[]> = {
   sentencesV2: sentencesV2,
   sports: sportWords,
   time: timeWords,
-  verbs: verbWords
+  verbs: verbWords,
+  inazuma: allInazumaWords,
+  umamusume: allUmaWords
 };
 
 // --- 4. Utilitaires ---
@@ -72,4 +96,6 @@ export const categories = [
   { id: 'objets', label: 'Objets', icon: '📦' },
   { id: 'places', label: 'Lieux', icon: '📍' },
   { id: 'polit', label: 'Politesse', icon: '🙏' },
+  { id: 'inazuma', label: 'Inazuma Eleven', icon: '⚡' },
+  { id: 'umamusume', label: 'Uma Musume', icon: '🐴' }
 ];

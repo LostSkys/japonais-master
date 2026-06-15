@@ -12,8 +12,10 @@ import Cameleon from './components/Cameleon';
 import SocialSim from './components/SocialSim';
 import OralCards from './components/OralCards'; 
 import { allWords } from './data';
+import KanasGuide from './components/KanasGuide';
+import TravelGuide from './components/TravelGuide';
 
-type GameState = 'menu' | 'cards' | 'match' | 'sentences' | 'anime' | 'blanks' | 'ref' | 'oral' | 'conv' | 'chrono' | 'draw' | 'cameleon' | 'social' | 'master';
+type GameState = 'menu' | 'cards' | 'match' | 'sentences' | 'anime' | 'blanks' | 'ref' | 'oral' | 'conv' | 'chrono' | 'draw' | 'cameleon' | 'social' | 'master' | 'kanas_guide' | 'travel_guide';
 
 const shuffleBag = (array: any[]) => {
   if (!array || array.length === 0) return [];
@@ -90,6 +92,8 @@ const App: React.FC = () => {
     { id: 'draw', label: 'Kanji Draw', desc: 'Apprends à tracer', icon: '🖌️', border: 'border-l-cyan-400' },
     { id: 'cameleon', label: 'Le Caméléon', desc: 'Adapte ton registre', icon: '🦎', border: 'border-l-blue-400' },
     { id: 'social', label: 'Savoir-Vivre', desc: 'Étiquette & Codes', icon: '🙇', border: 'border-l-green-500' },
+    { id: 'kanas_guide', label: 'Les 3 Alphabets', desc: 'Hiragana, Katakana, Kanji : le guide', icon: '🔤', border: 'border-l-indigo-400' },
+    { id: 'travel_guide', label: 'Guide de Voyage', desc: 'Savoir-vivre, bouffe, hébergement', icon: '🗺️', border: 'border-l-emerald-400' }, 
   ];
 
   return (
@@ -184,6 +188,8 @@ const App: React.FC = () => {
                 {gameState === 'cameleon' && <Cameleon onBack={() => setGameState('menu')} />}
                 {gameState === 'social' && <SocialSim onBack={() => setGameState('menu')} />}
                 {gameState === 'master' && <OralCards />}
+                {gameState === 'kanas_guide' && <KanasGuide />}
+                {gameState === 'travel_guide' && <TravelGuide />}
             </div>
           </div>
         )}
